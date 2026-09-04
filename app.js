@@ -99,19 +99,30 @@ function handleLogin() {
     const pw = loginPwInput.value.trim();
     if (!id || !pw) { alert("아이디와 비밀번호를 입력해주세요."); return; }
 
+    alert("📡 1단계: 구글 서버에 계정 조회 요청을 보냅니다...");
+
     const userRef = db.collection("account_rules").doc(id);
     userRef.get().then((doc) => {
+        alert("🟢 2단계: 구글 서버로부터 응답을 받았습니다! 데이터를 분석합니다.");
         if (!doc.exists) {
+            alert("🆕 3단계: 처음 온 아이디입니다. 회원등록을 진행합니다.");
             userRef.set({ password: pw }).then(() => {
                 alert(`🎉 [클라우드 계정 등록] 새 아이디(${id})가 전 세계 서버에 저장되었습니다.`);
                 proceedLogin(id);
-            }).catch(err => alert("서버 저장 실패: " + err));
+            }).catch(err => alert("🔴 에러 발생(서버 저장 실패): " + err));
         } else {
-            if (doc.data().password === pw) { proceedLogin(id); } 
-            else { loginErrorMsg.classList.remove('hidden'); loginPwInput.value = ''; }
+            alert("🔐 3단계: 기존 아이디를 확인했습니다. 비밀번호를 검증합니다.");
+            if (doc.data().password === pw) { 
+                proceedLogin(id); 
+            } else { 
+                alert("❌ 비밀번호가 틀렸습니다.");
+                loginErrorMsg.classList.remove('hidden'); 
+                loginPwInput.value = ''; 
+            }
         }
     }).catch(err => {
-        alert("통신 오류 발생! 파이어베이스 콘솔의 'Rules' 탭에서 allow read, write: if true; 가 제대로 게시되었는지 확인해주세요.");
+        // 구글 서버가 락을 걸었을 때 무조건 일로 튕겨 나옵니다.
+        alert("🔴 통신 단절 에러 발생! 원인: " + err.message);
         console.error(err);
     });
 }
