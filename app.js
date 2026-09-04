@@ -1,3 +1,4 @@
+// 📡 1단계에서 구글 콘솔에 뜬 본인의 config 정보를 복사해서 여기에 정확히 붙여넣으세요!
 const firebaseConfig = {
     apiKey: "AIzaSyAlklkIM7C086jhIHpnumxceayb-PIvPVg",
     authDomain: "pllll-429ed.firebaseapp.com",
@@ -7,12 +8,16 @@ const firebaseConfig = {
     appId: "1:299339940502:web:c4f514eebc4dfc859a78b7"
   };
 
+
+// 파이어베이스 및 실시간 Firestore DB 초기화
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 let currentDate = new Date();
 let selectedDateStr = "";
-let todoData = JSON.parse(localStorage.getItem('calendar_planner_data')) || {};
-let notifiedTasks = JSON.parse(localStorage.getItem('notified_tasks')) || [];
+let currentUserId = sessionStorage.getItem('planner_user_id') || "";
+let todoData = {}; // 구글 클라우드에서 실시간 동기화됨
 
-// 🛠️ 범용 명칭으로 기본값 설정 변경
 let configData = JSON.parse(localStorage.getItem('planner_config_data')) || {
     mainTitle: "🗓️ 달력 플래너",
     primaryColor: "#2ecc71",
@@ -24,6 +29,7 @@ let configData = JSON.parse(localStorage.getItem('planner_config_data')) || {
 let timerInterval = null;
 let elapsedSeconds = 0; 
 
+// DOM 캐싱
 const grid = document.getElementById('calendar-grid');
 const monthYearTitle = document.getElementById('month-year-title');
 const plannerContainer = document.getElementById('planner-container');
@@ -31,13 +37,27 @@ const selectedDateTitle = document.getElementById('selected-date-title');
 const taskInput = document.getElementById('new-task-input');
 const timeInput = document.getElementById('task-time-input');
 const todoListContainer = document.getElementById('todo-list');
-
 const swDisplay = document.getElementById('stopwatch-display');
 const quotaSelect = document.getElementById('quota-select');
 const progressBar = document.getElementById('quota-progress-bar');
 const progressText = document.getElementById('quota-progress-text');
 
+const loginContainer = document.getElementById('login-container');
+const mainAppContainer = document.getElementById('main-app-container');
+const loginIdInput = document.getElementById('login-id');
+const loginPwInput = document.getElementById('login-pw');
+const loginErrorMsg = document.getElementById('login-error');
+
 function initCalendar() {
+    if (currentUserId) {
+        listenUserData(currentUserId);
+        showApp();
+    }
+
+    document.getElementById('login-btn').addEventListener('click', handleLogin);
+    loginPwInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleLogin(); });
+    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
     applyConfig(); 
     initSettingsUI(); 
     updateDDay();
@@ -56,8 +76,72 @@ function initCalendar() {
     document.getElementById('sw-stop-btn').addEventListener('click', stopStopwatch);
     document.getElementById('sw-reset-btn').addEventListener('click', resetStopwatch);
     quotaSelect.addEventListener('change', updateProgressBar);
+}
 
-    setInterval(checkAlarms, 10000);
+// 🌐 구글 클라우드 실시간 감시 소켓 라이브러리 엔진
+function listenUserData(userId) {
+    db.collection("users").doc(userId).onSnapshot((doc) => {
+        if (doc.exists) {
+            todoData = doc.data().plannerData || {};
+        } else {
+            todoData = {};
+        }
+        if (selectedDateStr) {
+            const data = todoData[selectedDateStr] || { tasks: [], studySeconds: 0, quotaHours: 3 };
+            elapsedSeconds = data.studySeconds || 0;
+            updateStopwatchDisplay();
+            updateProgressBar();
+            renderTodoList();
+        }
+        renderCalendar();
+    });
+}
+
+function handleLogin() {
+    const id = loginIdInput.value.trim();
+    const pw = loginPwInput.value.trim();
+
+    if (!id || !pw) {
+        alert("아이디와 비밀번호를 입력해주세요.");
+        return;
+    }
+
+    const userRef = db.collection("account_rules").doc(id);
+    userRef.get().then((doc) => {
+        if (!doc.exists) {
+            userRef.set({ password: pw }).then(() => {
+                alert(`🎉 [클라우드 계정 등록] 새 아이디(${id})가 전 세계 서버에 저장되었습니다.`);
+                proceedLogin(id);
+            });
+        } else {
+            if (doc.data().password === pw) {
+                proceedLogin(id);
+            } else {
+                loginErrorMsg.classList.remove('hidden');
+                loginPwInput.value = '';
+            }
+        }
+    });
+}
+
+function proceedLogin(id) {
+    currentUserId = id;
+    sessionStorage.setItem('planner_user_id', id);
+    loginErrorMsg.classList.add('hidden');
+    listenUserData(id);
+    showApp();
+}
+
+function handleLogout() {
+    stopStopwatch();
+    sessionStorage.removeItem('planner_user_id');
+    currentUserId = "";
+    todoData = {};
+    loginIdInput.value = '';
+    loginPwInput.value = '';
+    plannerContainer.classList.add('hidden');
+    mainAppContainer.classList.add('hidden');
+    loginContainer.classList.remove('hidden');
 }
 
 function applyConfig() {
@@ -84,31 +168,17 @@ function initSettingsUI() {
     colorInput.addEventListener('input', (e) => { configData.primaryColor = e.target.value; saveConfig(); });
     fontSelect.addEventListener('change', (e) => { configData.fontStyle = e.target.value; saveConfig(); });
     ddayTextInput.addEventListener('input', (e) => { configData.ddayText = e.target.value; saveConfig(); });
-    
-    ddayDateInput.addEventListener('change', (e) => {
-        configData.ddayTargetDate = e.target.value;
-        saveConfig();
-        updateDDay();
-    });
+    ddayDateInput.addEventListener('change', (e) => { configData.ddayTargetDate = e.target.value; saveConfig(); });
 }
 
 function saveConfig() { localStorage.setItem('planner_config_data', JSON.stringify(configData)); applyConfig(); }
 
 function updateDDay() {
     const today = new Date(); today.setHours(0,0,0,0);
-    const target = new Date(configData.ddayTargetDate || "2027-03-02"); 
-    target.setHours(0,0,0,0);
-    
+    const target = new Date(configData.ddayTargetDate || "2027-03-02"); target.setHours(0,0,0,0);
     const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
     const ddayElement = document.getElementById('dday-count');
-    
-    if (diffDays > 0) {
-        ddayElement.innerText = `D-${diffDays}`;
-    } else if (diffDays === 0) {
-        ddayElement.innerText = `D-Day`;
-    } else {
-        ddayElement.innerText = `종료`;
-    }
+    ddayElement.innerText = diffDays > 0 ? `D-${diffDays}` : (diffDays === 0 ? `D-Day` : `종료`);
 }
 
 function renderCalendar() {
@@ -160,9 +230,8 @@ function selectDate(dateStr, element) {
     plannerContainer.classList.remove('hidden');
     selectedDateTitle.innerText = `📌 ${dateStr} 학습 계획`;
     
-    if (!todoData[selectedDateStr] || Array.isArray(todoData[selectedDateStr])) {
-        const oldTasks = Array.isArray(todoData[selectedDateStr]) ? todoData[selectedDateStr] : [];
-        todoData[selectedDateStr] = { tasks: oldTasks, studySeconds: 0, quotaHours: 3 };
+    if (!todoData[selectedDateStr]) {
+        todoData[selectedDateStr] = { tasks: [], studySeconds: 0, quotaHours: 3 };
     }
 
     elapsedSeconds = todoData[selectedDateStr].studySeconds || 0;
@@ -175,7 +244,7 @@ function selectDate(dateStr, element) {
 
 function renderTodoList() {
     todoListContainer.innerHTML = '';
-    const tasks = todoData[selectedDateStr].tasks || [];
+    const tasks = todoData[selectedDateStr]?.tasks || [];
 
     tasks.forEach(task => {
         const item = document.createElement('div');
@@ -185,6 +254,7 @@ function renderTodoList() {
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox'; checkbox.checked = task.completed;
+        checkbox.style.marginRight = '8px';
         checkbox.addEventListener('change', () => toggleTask(task.id));
 
         const textSpan = document.createElement('span'); textSpan.innerText = task.text;
@@ -209,8 +279,6 @@ function startStopwatch() {
         elapsedSeconds++;
         todoData[selectedDateStr].studySeconds = elapsedSeconds;
         saveData();
-        updateStopwatchDisplay();
-        updateProgressBar();
     }, 1000);
 }
 
@@ -225,8 +293,6 @@ function resetStopwatch() {
         elapsedSeconds = 0;
         todoData[selectedDateStr].studySeconds = 0;
         saveData();
-        updateStopwatchDisplay();
-        updateProgressBar();
     }
 }
 
@@ -239,13 +305,9 @@ function updateStopwatchDisplay() {
 
 function updateProgressBar() {
     const targetHours = parseInt(quotaSelect.value);
-    todoData[selectedDateStr].quotaHours = targetHours;
-    saveData();
-
     const targetSeconds = targetHours * 3600;
     let percentage = Math.floor((elapsedSeconds / targetSeconds) * 100);
     if (percentage > 100) percentage = 100;
-
     progressBar.style.width = `${percentage}%`;
     progressText.innerText = `오늘 목표 달성률: ${percentage}%`;
 }
@@ -254,37 +316,23 @@ function addTask() {
     const text = taskInput.value.trim(); const time = timeInput.value;
     if (!text) return;
     todoData[selectedDateStr].tasks.push({ id: Date.now(), text: text, time: time || null, completed: false });
-    saveData(); taskInput.value = ''; timeInput.value = ''; renderTodoList(); renderCalendar();
+    saveData(); taskInput.value = ''; timeInput.value = '';
 }
 
 function toggleTask(id) {
     todoData[selectedDateStr].tasks = todoData[selectedDateStr].tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
-    saveData(); renderTodoList(); renderCalendar();
+    saveData();
 }
 
 function deleteTask(id) {
     todoData[selectedDateStr].tasks = todoData[selectedDateStr].tasks.filter(t => t.id !== id);
-    saveData(); renderTodoList(); renderCalendar();
+    saveData();
 }
 
-function saveData() { localStorage.setItem('calendar_planner_data', JSON.stringify(todoData)); }
-
-function checkAlarms() {
-    const now = new Date();
-    for (const dateStr in todoData) {
-        const tasks = todoData[dateStr].tasks || [];
-        tasks.forEach(task => {
-            if (task.time && !task.completed && !notifiedTasks.includes(task.id)) {
-                const taskDateTime = new Date(`${dateStr}T${task.time}:00`);
-                const timeDiff = taskDateTime - now;
-                if (timeDiff > 0 && timeDiff <= 60 * 60 * 1000) {
-                    notifiedTasks.push(task.id);
-                    localStorage.setItem('notified_tasks', JSON.stringify(notifiedTasks));
-                    alert(`⏰ [학습 알람] 1시간 뒤 계획된 공부가 있습니다!\n내용: ${task.text} (${task.time})`);
-                }
-            }
-        });
-    }
+// ☁️ 구글 원격 클라우드 업데이트 코어
+function saveData() { 
+    todoData[selectedDateStr].quotaHours = parseInt(quotaSelect.value);
+    db.collection("users").doc(currentUserId).set({ plannerData: todoData });
 }
 
 initCalendar();
