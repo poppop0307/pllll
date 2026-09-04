@@ -1,29 +1,13 @@
-  const firebaseConfig = {
-    apiKey: "AIzaSyAlklkIM7C086jhIHpnumxceayb-PIvPVg",
-    authDomain: "pllll-429ed.firebaseapp.com",
-    projectId: "pllll-429ed",
-    storageBucket: "pllll-429ed.firebasestorage.app",
-    messagingSenderId: "299339940502",
-    appId: "1:299339940502:web:c4f514eebc4dfc859a78b7"
-  };
-
-// 파이어베이스 초기화
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
 let currentDate = new Date();
 let selectedDateStr = "";
-let currentUserId = sessionStorage.getItem('planner_user_id') || "";
-let todoData = {}; 
+let todoData = JSON.parse(localStorage.getItem('calendar_planner_data')) || {};
 let timerInterval = null;
 let elapsedSeconds = 0; 
 
-// 개인화 설정 기본값
 let configData = JSON.parse(localStorage.getItem('planner_config_data')) || {
     mainTitle: "🗓️ 달력 플래너", primaryColor: "#2ecc71", fontStyle: "'Malgun Gothic', sans-serif", ddayText: "🔥 필기 시험까지", ddayTargetDate: "2027-03-02"
 };
 
-// DOM 캐싱
 const grid = document.getElementById('calendar-grid');
 const monthYearTitle = document.getElementById('month-year-title');
 const plannerContainer = document.getElementById('planner-container');
@@ -35,68 +19,21 @@ const swDisplay = document.getElementById('stopwatch-display');
 const quotaSelect = document.getElementById('quota-select');
 const progressBar = document.getElementById('quota-progress-bar');
 const progressText = document.getElementById('quota-progress-text');
-const loginContainer = document.getElementById('login-container');
-const mainAppContainer = document.getElementById('main-app-container');
-const loginIdInput = document.getElementById('login-id');
-const loginPwInput = document.getElementById('login-pw');
-const loginErrorMsg = document.getElementById('login-error');
 
-// 🔐 로그인 핸들러 (디버깅 얼럿 추가 버전)
-function handleLogin() {
-    const id = loginIdInput.value.trim();
-    const pw = loginPwInput.value.trim();
-    if (!id || !pw) { alert("아이디와 비밀번호를 입력해주세요."); return; }
-
-    alert("📡 1단계: 구글 서버에 요청을 보냅니다.");
-
-    const userRef = db.collection("account_rules").doc(id);
-    userRef.get().then((doc) => {
-        alert("🟢 2단계: 서버 응답 완료!");
-        if (!doc.exists) {
-            alert("🆕 3단계: 신규 유저 등록 진행");
-            userRef.set({ password: pw }).then(() => {
-                alert(`🎉 계정 등록 완료! 아이디: ${id}`);
-                proceedLogin(id);
-            }).catch(err => alert("서버 저장 에러: " + err));
-        } else {
-            if (doc.data().password === pw) { 
-                proceedLogin(id); 
-            } else { 
-                loginErrorMsg.classList.remove('hidden'); 
-                loginPwInput.value = ''; 
-                alert("❌ 비밀번호가 다릅니다.");
-            }
-        }
-    }).catch(err => {
-        alert("🔴 구글 서버 통신 단절 에러! 파이어베이스 Rules 탭을 확인하세요.\n원인: " + err.message);
-    });
+function initCalendar() {
+    applyConfig(); initSettingsUI(); updateDDay(); renderCalendar();
+    document.getElementById('prev-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
+    document.getElementById('next-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
+    document.getElementById('add-task-btn').addEventListener('click', addTask);
+    taskInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') addTask(); });
+    document.getElementById('toggle-settings-btn').addEventListener('click', () => { document.getElementById('settings-panel').classList.toggle('hidden'); });
+    document.getElementById('sw-start-btn').addEventListener('click', startStopwatch);
+    document.getElementById('sw-stop-btn').addEventListener('click', stopStopwatch);
+    document.getElementById('sw-reset-btn').addEventListener('click', resetStopwatch);
+    quotaSelect.addEventListener('change', updateProgressBar);
 }
 
-function proceedLogin(id) {
-    currentUserId = id;
-    sessionStorage.setItem('planner_user_id', id);
-    loginErrorMsg.classList.add('hidden');
-    listenUserData(id);
-    showApp();
-}
-
-function listenUserData(userId) {
-    db.collection("users").doc(userId).onSnapshot((doc) => {
-        if (doc.exists) todoData = doc.data().plannerData || {};
-        else todoData = {};
-        if (selectedDateStr) {
-            const data = todoData[selectedDateStr] || { tasks: [], studySeconds: 0, quotaHours: 3 };
-            elapsedSeconds = data.studySeconds || 0;
-            updateStopwatchDisplay(); updateProgressBar(); renderTodoList();
-        }
-        renderCalendar();
-    });
-}
-
-function showApp() { loginContainer.classList.add('hidden'); mainAppContainer.classList.remove('hidden'); }
-function handleLogout() { stopStopwatch(); sessionStorage.removeItem('planner_user_id'); currentUserId = ""; todoData = {}; loginIdInput.value = ''; loginPwInput.value = ''; mainAppContainer.classList.add('hidden'); loginContainer.classList.remove('hidden'); }
 function applyConfig() { document.getElementById('main-title').innerText = configData.mainTitle; document.documentElement.style.setProperty('--primary', configData.primaryColor); document.body.style.fontFamily = configData.fontStyle; document.getElementById('dday-custom-text').innerText = configData.ddayText; }
-
 function initSettingsUI() {
     const titleInput = document.getElementById('setting-main-title'); const colorInput = document.getElementById('setting-color'); const fontSelect = document.getElementById('setting-font'); const ddayTextInput = document.getElementById('setting-dday-text'); const ddayDateInput = document.getElementById('setting-dday-date');
     titleInput.value = configData.mainTitle; colorInput.value = configData.primaryColor; fontSelect.value = configData.fontStyle; ddayTextInput.value = configData.ddayText; ddayDateInput.value = configData.ddayTargetDate;
@@ -127,7 +64,7 @@ function renderCalendar() {
 
 function selectDate(dateStr, element) {
     stopStopwatch(); document.querySelectorAll('.day').forEach(d => d.classList.remove('selected')); element.classList.add('selected'); selectedDateStr = dateStr; plannerContainer.classList.remove('hidden'); selectedDateTitle.innerText = `📌 ${dateStr} 학습 계획`;
-    if (!todoData[selectedDateStr]) todoData[selectedDateStr] = { tasks: [], studySeconds: 0, quotaHours: 3 };
+    if (!todoData[selectedDateStr] || Array.isArray(todoData[selectedDateStr])) { const old = Array.isArray(todoData[selectedDateStr]) ? todoData[selectedDateStr] : []; todoData[selectedDateStr] = { tasks: old, studySeconds: 0, quotaHours: 3 }; }
     elapsedSeconds = todoData[selectedDateStr].studySeconds || 0; quotaSelect.value = todoData[selectedDateStr].quotaHours || 3;
     updateStopwatchDisplay(); updateProgressBar(); renderTodoList();
 }
@@ -144,8 +81,17 @@ function renderTodoList() {
     });
 }
 
-function startStopwatch() { if (timerInterval) return; timerInterval = setInterval(() => { elapsedSeconds++; todoData[selectedDateStr].studySeconds = elapsedSeconds; if (elapsedSeconds % 5 === 0) saveData(); updateStopwatchDisplay(); updateProgressBar(); }, 1000); }
-function stopStopwatch() { clearInterval(timerInterval); timerInterval = null; if (selectedDateStr) saveData(); }
+function startStopwatch() { if (timerInterval) return; timerInterval = setInterval(() => { elapsedSeconds++; todoData[selectedDateStr].studySeconds = elapsedSeconds; saveData(); updateStopwatchDisplay(); updateProgressBar(); }, 1000); }
+function stopStopwatch() { clearInterval(timerInterval); timerInterval = null; }
 function resetStopwatch() { if (confirm("공부 시간을 리셋하시겠습니까?")) { stopStopwatch(); elapsedSeconds = 0; todoData[selectedDateStr].studySeconds = 0; saveData(); updateStopwatchDisplay(); updateProgressBar(); } }
-function updateStopwatchDisplay() { const hrs = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0'); const mins = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0'); const secs = String(elapsedSeconds % 60).padStart(2, '0'); swDisplay.innerText = ${hrs}:${mins}:${secs}; }function updateProgressBar() { const targetHours = parseInt(quotaSelect.value); const targetSeconds = targetHours * 3600; let percentage = Math.floor((elapsedSeconds / targetSeconds) * 100); if (percentage > 100) percentage = 100; progressBar.style.width = ${percentage}%; progressText.innerText = 오늘 목표 달성률: ${percentage}%; }function addTask() {const text = taskInput.value.trim(); const time = timeInput.value; if (!text) return;todoData[selectedDateStr].tasks.push({ id: Date.now(), text: text, time: time || null, completed: false });saveData(); taskInput.value = ''; timeInput.value = ''; renderTodoList(); renderCalendar();}function saveData() { if (selectedDateStr) { todoData[selectedDateStr].quotaHours = parseInt(quotaSelect.value); db.collection("users").doc(currentUserId).set({ plannerData: todoData }); } }
-// 🚀 웹 앱 구동!initCalendar();
+function updateStopwatchDisplay() { const hrs = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0'); const mins = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0'); const secs = String(elapsedSeconds % 60).padStart(2, '0'); swDisplay.innerText = `${hrs}:${mins}:${secs}`; }
+function updateProgressBar() { const targetHours = parseInt(quotaSelect.value); const targetSeconds = targetHours * 3600; let percentage = Math.floor((elapsedSeconds / targetSeconds) * 100); if (percentage > 100) percentage = 100; progressBar.style.width = `${percentage}%`; progressText.innerText = `오늘 목표 달성률: ${percentage}%`; }
+
+function addTask() {
+    const text = taskInput.value.trim(); const time = timeInput.value; if (!text) return;
+    todoData[selectedDateStr].tasks.push({ id: Date.now(), text: text, time: time || null, completed: false });
+    saveData(); taskInput.value = ''; timeInput.value = ''; renderTodoList(); renderCalendar();
+}
+function saveData() { localStorage.setItem('calendar_planner_data', JSON.stringify(todoData)); }
+
+initCalendar();
