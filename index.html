@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <!-- 모바일 화면 깨짐 방지용 핵심 메타태그 정밀 보완 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>⚡ 쌍기사 달력 플래너 + 스탑워치</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 상단 고정 D-Day 구역 -->
+        <div class="dday-banner">
+            <span id="dday-custom-text">🔥 전기기사 1회차 필기 시험까지</span> 
+            <span id="dday-count">Calculating...</span>
+        </div>
+
+        <!-- 메인 타이틀 및 설정 버튼 구역 -->
+        <div class="header-zone">
+            <h1 id="main-title">🗓️ 쌍기사 합격 달력 플래너</h1>
+            <button id="toggle-settings-btn">⚙️ 설정</button>
+        </div>
+
+        <!-- ⚙️ 설정 패널 구역 -->
+        <div id="settings-panel" class="settings-container hidden">
+            <h3>⚙️ 플래너 개인화 설정</h3>
+            <div class="setting-row">
+                <label>✍️ 메인 타이틀 변경:</label>
+                <input type="text" id="setting-main-title" value="🗓️ 쌍기사 합격 달력 플래너">
+            </div>
+            <div class="setting-row">
+                <label>🎨 테마 색상:</label>
+                <input type="color" id="setting-color" value="#2ecc71">
+            </div>
+            <div class="setting-row">
+                <label>🔤 폰트 스타일:</label>
+                <select id="setting-font">
+                    <option value="'Malgun Gothic', sans-serif">맑은 고딕</option>
+                    <option value="'Courier New', monospace">개발자 코딩풍</option>
+                    <option value="'Georgia', serif">클래식 서적풍</option>
+                    <option value="'Arial', sans-serif">깔끔한 고딕</option>
+                </select>
+            </div>
+            <div class="setting-row">
+                <label>✍️ D-Day 문구 변경:</label>
+                <input type="text" id="setting-dday-text" value="🔥 전기기사 1회차 필기 시험까지">
+            </div>
+        </div>
+        
+        <!-- 달력 구역 -->
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <button id="prev-month">◀</button>
+                <h2 id="month-year-title"></h2>
+                <button id="next-month">▶</button>
+            </div>
+            <div class="calendar-days">
+                <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+            </div>
+            <div id="calendar-grid" class="calendar-grid"></div>
+        </div>
+
+        <!-- 일일 플래너 + 스탑워치 + 할당량 구역 -->
+        <div id="planner-container" class="planner-container hidden">
+            <h3 id="selected-date-title">📌 선택된 날짜</h3>
+            
+            <!-- ⏱️ 스탑워치 및 일일 공부 할당량 UI 대시보드 -->
+            <div class="stopwatch-section">
+                <div class="quota-row">
+                    <label>🎯 목표 공부 시간:</label>
+                    <select id="quota-select">
+                        <option value="1">1시간</option>
+                        <option value="2">2시간</option>
+                        <option value="3" selected>3시간</option>
+                        <option value="4">4시간</option>
+                        <option value="5">5시간</option>
+                        <option value="6">6시간</option>
+                        <option value="8">8시간</option>
+                    </select>
+                </div>
+                
+                <div class="timer-display" id="stopwatch-display">00:00:00</div>
+                
+                <div class="stopwatch-btn-group">
+                    <button id="sw-start-btn">▶ 시작</button>
+                    <button id="sw-stop-btn">⏸ 정지</button>
+                    <button id="sw-reset-btn">🔄 리셋</button>
+                </div>
+
+                <!-- 달성률 프로그레스 바 -->
+                <div class="progress-container">
+                    <div class="progress-bar" id="quota-progress-bar"></div>
+                    <span class="progress-text" id="quota-progress-text">달성률: 0%</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="new-task-input" placeholder="오늘 할 공부 (예: 회로이론 1강)">
+                <input type="time" id="task-time-input">
+                <button id="add-task-btn">추가</button>
+            </div>
+            <div id="todo-list"></div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
