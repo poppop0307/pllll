@@ -1,3 +1,12 @@
+const firebaseConfig = {
+    apiKey: "AIzaSyAlklkIM7C086jhIHpnumxceayb-PIvPVg",
+    authDomain: "pllll-429ed.firebaseapp.com",
+    projectId: "pllll-429ed",
+    storageBucket: "pllll-429ed.firebasestorage.app",
+    messagingSenderId: "299339940502",
+    appId: "1:299339940502:web:c4f514eebc4dfc859a78b7"
+  };
+
 let currentDate = new Date();
 let selectedDateStr = "";
 let todoData = JSON.parse(localStorage.getItem('calendar_planner_data')) || {};
