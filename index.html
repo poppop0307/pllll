@@ -1,29 +1,42 @@
 <!DOCTYPE html>
 <html lang="ko">
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>⚡ 맞춤형 달력 플래너</title>
+    <!-- 구글 파이어베이스 공식 라이브러리 2줄 -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-    
 <body>
-    <div class="container">
-        <!-- 상단 고정 D-Day 구역 -->
+    <!-- 🔓 가상 로그인 창 -->
+    <div id="login-container" class="login-box">
+        <h2>🔐 플래너 인증</h2>
+        <p class="login-hint">아이디와 비밀번호를 입력하세요.</p>
+        <div class="login-form">
+            <input type="text" id="login-id" placeholder="아이디">
+            <input type="password" id="login-pw" placeholder="비밀번호">
+            <button id="login-btn">로그인</button>
+        </div>
+        <p id="login-error" class="error-text hidden">❌ 계정 정보가 틀렸습니다.</p>
+    </div>
+
+    <!-- 🗓️ 메인 서비스 컨테이너 (로그인 성공 시 노출) -->
+    <div id="main-app-container" class="container hidden">
         <div class="dday-banner">
             <span id="dday-custom-text">🔥 필기 시험까지</span> 
             <span id="dday-count">Calculating...</span>
         </div>
 
-        <!-- 메인 타이틀 및 설정 버튼 구역 -->
         <div class="header-zone">
             <h1 id="main-title">🗓️ 달력 플래너</h1>
-            <button id="toggle-settings-btn">⚙️ 설정</button>
+            <div class="header-btns">
+                <button id="logout-btn">로그아웃</button>
+                <button id="toggle-settings-btn">⚙️ 설정</button>
+            </div>
         </div>
 
-        <!-- ⚙️ 설정 패널 구역 -->
         <div id="settings-panel" class="settings-container hidden">
             <h3>⚙️ 플래너 개인화 설정</h3>
             <div class="setting-row">
@@ -53,7 +66,6 @@
             </div>
         </div>
         
-        <!-- 달력 구역 -->
         <div class="calendar-container">
             <div class="calendar-header">
                 <button id="prev-month">◀</button>
@@ -66,11 +78,9 @@
             <div id="calendar-grid" class="calendar-grid"></div>
         </div>
 
-        <!-- 일일 플래너 구역 -->
         <div id="planner-container" class="planner-container hidden">
             <h3 id="selected-date-title">📌 선택된 날짜</h3>
             
-            <!-- 스탑워치 및 일일 공부 할당량 UI 대시보드 -->
             <div class="stopwatch-section">
                 <div class="quota-row">
                     <label>🎯 목표 공부 시간:</label>
@@ -107,6 +117,6 @@
             <div id="todo-list"></div>
         </div>
     </div>
-    <script src="app.js?v=3"></script>
+    <script src="app.js"></script>
 </body>
 </html>
