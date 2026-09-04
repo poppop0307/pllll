@@ -2,16 +2,15 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <!-- 모바일 화면 깨짐 방지용 핵심 메타태그 정밀 보완 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>⚡ 달력 플래너 + 스탑워치</title>
+    <title>⚡ 맞춤형 달력 플래너</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <!-- 상단 고정 D-Day 구역 -->
         <div class="dday-banner">
-            <span id="dday-custom-text">🔥 1회차 필기 시험까지</span> 
+            <span id="dday-custom-text">🔥 필기 시험까지</span> 
             <span id="dday-count">Calculating...</span>
         </div>
 
@@ -29,6 +28,14 @@
                 <input type="text" id="setting-main-title" value="🗓️ 달력 플래너">
             </div>
             <div class="setting-row">
+                <label>📅 D-Day 목표 날짜:</label>
+                <input type="date" id="setting-dday-date" value="2027-03-02">
+            </div>
+            <div class="setting-row">
+                <label>✍️ D-Day 문구 변경:</label>
+                <input type="text" id="setting-dday-text" value="🔥 필기 시험까지">
+            </div>
+            <div class="setting-row">
                 <label>🎨 테마 색상:</label>
                 <input type="color" id="setting-color" value="#2ecc71">
             </div>
@@ -40,10 +47,6 @@
                     <option value="'Georgia', serif">클래식 서적풍</option>
                     <option value="'Arial', sans-serif">깔끔한 고딕</option>
                 </select>
-            </div>
-            <div class="setting-row">
-                <label>✍️ D-Day 문구 변경:</label>
-                <input type="text" id="setting-dday-text" value="🔥 1회차 필기 시험까지">
             </div>
         </div>
         
@@ -60,11 +63,11 @@
             <div id="calendar-grid" class="calendar-grid"></div>
         </div>
 
-        <!-- 일일 플래너 + 스탑워치 + 할당량 구역 -->
+        <!-- 일일 플래너 구역 -->
         <div id="planner-container" class="planner-container hidden">
             <h3 id="selected-date-title">📌 선택된 날짜</h3>
             
-            <!-- ⏱️ 스탑워치 및 일일 공부 할당량 UI 대시보드 -->
+            <!-- 스탑워치 및 일일 공부 할당량 UI 대시보드 -->
             <div class="stopwatch-section">
                 <div class="quota-row">
                     <label>🎯 목표 공부 시간:</label>
@@ -87,7 +90,6 @@
                     <button id="sw-reset-btn">🔄 리셋</button>
                 </div>
 
-                <!-- 달성률 프로그레스 바 -->
                 <div class="progress-container">
                     <div class="progress-bar" id="quota-progress-bar"></div>
                     <span class="progress-text" id="quota-progress-text">달성률: 0%</span>
@@ -95,7 +97,7 @@
             </div>
 
             <div class="input-group">
-                <input type="text" id="new-task-input" placeholder="오늘 할 공부 (예: 회로이론 1강)">
+                <input type="text" id="new-task-input" placeholder="오늘 할 공부를 입력하세요">
                 <input type="time" id="task-time-input">
                 <button id="add-task-btn">추가</button>
             </div>
