@@ -1,4 +1,4 @@
-// 📡 1단계에서 구글 콘솔에 뜬 본인의 config 정보를 복사해서 여기에 정확히 붙여넣으세요!
+// 📡 구글 파이어베이스 본인 정보를 여기에 넣으세요!
 const firebaseConfig = {
     apiKey: "AIzaSyAlklkIM7C086jhIHpnumxceayb-PIvPVg",
     authDomain: "pllll-429ed.firebaseapp.com",
@@ -9,14 +9,14 @@ const firebaseConfig = {
   };
 
 
-// 파이어베이스 및 실시간 Firestore DB 초기화
+// 파이어베이스 초기화 실행
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 let currentDate = new Date();
 let selectedDateStr = "";
 let currentUserId = sessionStorage.getItem('planner_user_id') || "";
-let todoData = {}; // 구글 클라우드에서 실시간 동기화됨
+let todoData = {}; 
 
 let configData = JSON.parse(localStorage.getItem('planner_config_data')) || {
     mainTitle: "🗓️ 달력 플래너",
@@ -29,7 +29,6 @@ let configData = JSON.parse(localStorage.getItem('planner_config_data')) || {
 let timerInterval = null;
 let elapsedSeconds = 0; 
 
-// DOM 캐싱
 const grid = document.getElementById('calendar-grid');
 const monthYearTitle = document.getElementById('month-year-title');
 const plannerContainer = document.getElementById('planner-container');
@@ -53,7 +52,6 @@ function initCalendar() {
         listenUserData(currentUserId);
         showApp();
     }
-
     document.getElementById('login-btn').addEventListener('click', handleLogin);
     loginPwInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleLogin(); });
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
@@ -67,18 +65,15 @@ function initCalendar() {
     document.getElementById('next-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
     document.getElementById('add-task-btn').addEventListener('click', addTask);
     taskInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') addTask(); });
-
     document.getElementById('toggle-settings-btn').addEventListener('click', () => {
         document.getElementById('settings-panel').classList.toggle('hidden');
     });
-
     document.getElementById('sw-start-btn').addEventListener('click', startStopwatch);
     document.getElementById('sw-stop-btn').addEventListener('click', stopStopwatch);
     document.getElementById('sw-reset-btn').addEventListener('click', resetStopwatch);
     quotaSelect.addEventListener('change', updateProgressBar);
 }
 
-// 🌐 구글 클라우드 실시간 감시 소켓 라이브러리 엔진
 function listenUserData(userId) {
     db.collection("users").doc(userId).onSnapshot((doc) => {
         if (doc.exists) {
@@ -100,11 +95,7 @@ function listenUserData(userId) {
 function handleLogin() {
     const id = loginIdInput.value.trim();
     const pw = loginPwInput.value.trim();
-
-    if (!id || !pw) {
-        alert("아이디와 비밀번호를 입력해주세요.");
-        return;
-    }
+    if (!id || !pw) { alert("아이디와 비밀번호를 입력해주세요."); return; }
 
     const userRef = db.collection("account_rules").doc(id);
     userRef.get().then((doc) => {
@@ -114,12 +105,8 @@ function handleLogin() {
                 proceedLogin(id);
             });
         } else {
-            if (doc.data().password === pw) {
-                proceedLogin(id);
-            } else {
-                loginErrorMsg.classList.remove('hidden');
-                loginPwInput.value = '';
-            }
+            if (doc.data().password === pw) { proceedLogin(id); } 
+            else { loginErrorMsg.classList.remove('hidden'); loginPwInput.value = ''; }
         }
     });
 }
@@ -135,10 +122,8 @@ function proceedLogin(id) {
 function handleLogout() {
     stopStopwatch();
     sessionStorage.removeItem('planner_user_id');
-    currentUserId = "";
-    todoData = {};
-    loginIdInput.value = '';
-    loginPwInput.value = '';
+    currentUserId = ""; todoData = {};
+    loginIdInput.value = ''; loginPwInput.value = '';
     plannerContainer.classList.add('hidden');
     mainAppContainer.classList.add('hidden');
     loginContainer.classList.remove('hidden');
@@ -177,8 +162,7 @@ function updateDDay() {
     const today = new Date(); today.setHours(0,0,0,0);
     const target = new Date(configData.ddayTargetDate || "2027-03-02"); target.setHours(0,0,0,0);
     const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-    const ddayElement = document.getElementById('dday-count');
-    ddayElement.innerText = diffDays > 0 ? `D-${diffDays}` : (diffDays === 0 ? `D-Day` : `종료`);
+    document.getElementById('dday-count').innerText = diffDays > 0 ? `D-${diffDays}` : (diffDays === 0 ? `D-Day` : `종료`);
 }
 
 function renderCalendar() {
@@ -329,7 +313,6 @@ function deleteTask(id) {
     saveData();
 }
 
-// ☁️ 구글 원격 클라우드 업데이트 코어
 function saveData() { 
     todoData[selectedDateStr].quotaHours = parseInt(quotaSelect.value);
     db.collection("users").doc(currentUserId).set({ plannerData: todoData });
