@@ -3,15 +3,15 @@ let selectedDateStr = "";
 let todoData = JSON.parse(localStorage.getItem('calendar_planner_data')) || {};
 let notifiedTasks = JSON.parse(localStorage.getItem('notified_tasks')) || [];
 
-// 🛠️ 설정 데이터 초기화
+// 🛠️ 범용 명칭으로 기본값 설정 변경
 let configData = JSON.parse(localStorage.getItem('planner_config_data')) || {
-    mainTitle: "🗓️ 쌍기사 합격 달력 플래너",
+    mainTitle: "🗓️ 달력 플래너",
     primaryColor: "#2ecc71",
     fontStyle: "'Malgun Gothic', sans-serif",
-    ddayText: "🔥 전기기사 1회차 필기 시험까지"
+    ddayText: "🔥 필기 시험까지",
+    ddayTargetDate: "2027-03-02"
 };
 
-// ⏱️ 스탑워치 글로벌 변수
 let timerInterval = null;
 let elapsedSeconds = 0; 
 
@@ -27,8 +27,6 @@ const swDisplay = document.getElementById('stopwatch-display');
 const quotaSelect = document.getElementById('quota-select');
 const progressBar = document.getElementById('quota-progress-bar');
 const progressText = document.getElementById('quota-progress-text');
-
-const EXAM_DATE = new Date("2027-03-02T00:00:00");
 
 function initCalendar() {
     applyConfig(); 
@@ -54,7 +52,7 @@ function initCalendar() {
 }
 
 function applyConfig() {
-    document.getElementById('main-title').innerText = configData.mainTitle || "🗓️ 쌍기사 합격 달력 플래너";
+    document.getElementById('main-title').innerText = configData.mainTitle || "🗓️ 달력 플래너";
     document.documentElement.style.setProperty('--primary', configData.primaryColor);
     document.body.style.fontFamily = configData.fontStyle;
     document.getElementById('dday-custom-text').innerText = configData.ddayText;
@@ -65,25 +63,43 @@ function initSettingsUI() {
     const colorInput = document.getElementById('setting-color');
     const fontSelect = document.getElementById('setting-font');
     const ddayTextInput = document.getElementById('setting-dday-text');
+    const ddayDateInput = document.getElementById('setting-dday-date');
 
-    titleInput.value = configData.mainTitle || "🗓️ 쌍기사 합격 달력 플래너";
+    titleInput.value = configData.mainTitle || "🗓️ 달력 플래너";
     colorInput.value = configData.primaryColor;
     fontSelect.value = configData.fontStyle;
     ddayTextInput.value = configData.ddayText;
+    ddayDateInput.value = configData.ddayTargetDate || "2027-03-02";
 
     titleInput.addEventListener('input', (e) => { configData.mainTitle = e.target.value; saveConfig(); });
     colorInput.addEventListener('input', (e) => { configData.primaryColor = e.target.value; saveConfig(); });
     fontSelect.addEventListener('change', (e) => { configData.fontStyle = e.target.value; saveConfig(); });
     ddayTextInput.addEventListener('input', (e) => { configData.ddayText = e.target.value; saveConfig(); });
+    
+    ddayDateInput.addEventListener('change', (e) => {
+        configData.ddayTargetDate = e.target.value;
+        saveConfig();
+        updateDDay();
+    });
 }
 
 function saveConfig() { localStorage.setItem('planner_config_data', JSON.stringify(configData)); applyConfig(); }
 
 function updateDDay() {
     const today = new Date(); today.setHours(0,0,0,0);
-    const target = new Date(EXAM_DATE); target.setHours(0,0,0,0);
+    const target = new Date(configData.ddayTargetDate || "2027-03-02"); 
+    target.setHours(0,0,0,0);
+    
     const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-    document.getElementById('dday-count').innerText = diffDays > 0 ? `D-${diffDays}` : (diffDays === 0 ? `D-Day` : `종료`);
+    const ddayElement = document.getElementById('dday-count');
+    
+    if (diffDays > 0) {
+        ddayElement.innerText = `D-${diffDays}`;
+    } else if (diffDays === 0) {
+        ddayElement.innerText = `D-Day`;
+    } else {
+        ddayElement.innerText = `종료`;
+    }
 }
 
 function renderCalendar() {
