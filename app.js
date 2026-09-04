@@ -89,6 +89,8 @@ function listenUserData(userId) {
             renderTodoList();
         }
         renderCalendar();
+    }, (error) => {
+        console.error("Firestore Error:", error);
     });
 }
 
@@ -103,11 +105,14 @@ function handleLogin() {
             userRef.set({ password: pw }).then(() => {
                 alert(`🎉 [클라우드 계정 등록] 새 아이디(${id})가 전 세계 서버에 저장되었습니다.`);
                 proceedLogin(id);
-            });
+            }).catch(err => alert("서버 저장 실패: " + err));
         } else {
             if (doc.data().password === pw) { proceedLogin(id); } 
             else { loginErrorMsg.classList.remove('hidden'); loginPwInput.value = ''; }
         }
+    }).catch(err => {
+        alert("통신 오류 발생! 파이어베이스 콘솔의 'Rules' 탭에서 allow read, write: if true; 가 제대로 게시되었는지 확인해주세요.");
+        console.error(err);
     });
 }
 
@@ -135,7 +140,6 @@ function applyConfig() {
     document.body.style.fontFamily = configData.fontStyle;
     document.getElementById('dday-custom-text').innerText = configData.ddayText;
 }
-
 function initSettingsUI() {
     const titleInput = document.getElementById('setting-main-title');
     const colorInput = document.getElementById('setting-color');
@@ -162,7 +166,8 @@ function updateDDay() {
     const today = new Date(); today.setHours(0,0,0,0);
     const target = new Date(configData.ddayTargetDate || "2027-03-02"); target.setHours(0,0,0,0);
     const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-    document.getElementById('dday-count').innerText = diffDays > 0 ? `D-${diffDays}` : (diffDays === 0 ? `D-Day` : `종료`);
+    const ddayElement = document.getElementById('dday-count');
+    ddayElement.innerText = diffDays > 0 ? `D-${diffDays}` : (diffDays === 0 ? `D-Day` : `종료`);
 }
 
 function renderCalendar() {
